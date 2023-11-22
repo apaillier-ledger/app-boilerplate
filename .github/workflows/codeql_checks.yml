@@ -18,16 +18,22 @@ jobs:
     name: Analyse
     strategy:
       matrix:
-        sdk: [ "$NANOS_SDK", "$NANOX_SDK", "$NANOSP_SDK" ]
+        sdk: [ "$NANOSP_SDK" ]
         #'cpp' covers C and C++
         language: [ 'cpp' ]
     runs-on: ubuntu-latest
+    env:
+      CODEQL_JAVA_HOME: /usr/lib/jvm/java-17-openjdk
     container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-legacy:latest
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest
 
     steps:
       - name: Clone
         uses: actions/checkout@v3
+
+      - name: Install JRE
+        run: |
+          apk add openjdk17-jre-headless
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
@@ -35,10 +41,32 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-and-quality
 
+      #- name: Install glibc compatibility layer
+      #  run: |
+      #    echo $LD_PRELOAD
+      #    apk add gcompat
+      #    env
+
+      - name: Get pre logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: pre-logs
+          path: /__w/_temp/
+
       # CodeQL will create the database during the compilation
       - name: Build
         run: |
           make BOLOS_SDK=${{ matrix.sdk }}
+
+      #- name: git status
+      #  run: |
+      #    git status
+
+      - name: Get post logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: post-logs
+          path: /__w/_temp/
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
